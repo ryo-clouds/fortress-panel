@@ -157,44 +157,6 @@ export class SecurityUtils {
   }
 
   /**
-   * Rate limiting implementation
-   */
-  class RateLimiter {
-    private requests: Map<string, number[]> = new Map();
-    private windowMs: number;
-    private maxRequests: number;
-
-    constructor(windowMs: number, maxRequests: number) {
-      this.windowMs = windowMs;
-      this.maxRequests = maxRequests;
-    }
-
-    isAllowed(identifier: string): boolean {
-      const now = Date.now();
-      const windowStart = now - this.windowMs;
-
-      const userRequests = this.requests.get(identifier) || [];
-      const validRequests = userRequests.filter(timestamp => timestamp > windowStart);
-
-      if (validRequests.length >= this.maxRequests) {
-        return false;
-      }
-
-      validRequests.push(now);
-      this.requests.set(identifier, validRequests);
-      return true;
-    }
-
-    reset(identifier?: string): void {
-      if (identifier) {
-        this.requests.delete(identifier);
-      } else {
-        this.requests.clear();
-      }
-    }
-  }
-
-  /**
    * Input sanitization
    */
   static sanitizeInput(input: any): any {
@@ -545,5 +507,43 @@ export class AppError extends Error {
 
   static internal(message: string, code: string = 'INTERNAL_ERROR'): AppError {
     return new AppError(message, 500, code);
+  }
+}
+
+/**
+ * Rate limiting implementation
+ */
+export class RateLimiter {
+  private requests: Map<string, number[]> = new Map();
+  private windowMs: number;
+  private maxRequests: number;
+
+  constructor(windowMs: number, maxRequests: number) {
+    this.windowMs = windowMs;
+    this.maxRequests = maxRequests;
+  }
+
+  isAllowed(identifier: string): boolean {
+    const now = Date.now();
+    const windowStart = now - this.windowMs;
+
+    const userRequests = this.requests.get(identifier) || [];
+    const validRequests = userRequests.filter(timestamp => timestamp > windowStart);
+
+    if (validRequests.length >= this.maxRequests) {
+      return false;
+    }
+
+    validRequests.push(now);
+    this.requests.set(identifier, validRequests);
+    return true;
+  }
+
+  reset(identifier?: string): void {
+    if (identifier) {
+      this.requests.delete(identifier);
+    } else {
+      this.requests.clear();
+    }
   }
 }
