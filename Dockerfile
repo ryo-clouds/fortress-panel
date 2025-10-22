@@ -19,7 +19,8 @@ RUN npm ci --only=production && npm cache clean --force
 
 # Copy source code
 COPY backend/src ./src
-COPY backend/shared ../shared
+COPY shared ../shared
+RUN mkdir -p backend/shared && cp -r ../shared/* backend/shared/
 
 # Build the application
 RUN npm run build
