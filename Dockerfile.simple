@@ -1,0 +1,50 @@
+# Simple production Dockerfile for Fortress Panel
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apk add --no-cache \
+    curl \
+    bash \
+    python3 \
+    git
+
+# Copy and install backend
+COPY backend/ ./backend
+COPY shared/ ./shared
+
+# Install backend dependencies
+RUN cd backend && npm install --production && npm cache clean --force
+
+# Copy and install frontend
+COPY frontend/ ./frontend
+
+# Install frontend dependencies and build
+RUN cd frontend && npm install && npm run build
+
+# Create necessary directories
+RUN mkdir -p \
+    /var/log/fortress-panel \
+    /var/lib/fortress-panel/apps \
+    /var/lib/fortress-panel/uploads \
+    /var/lib/fortress-panel/backups \
+    /var/lib/fortress-panel/ssl
+
+# Switch to non-root user
+RUN addgroup -g 1001 nodejs && \
+    adduser -u 1001 -G nodejs -s /bin/sh -d /app nodejs && \
+    chown -R nodejs:nodejs /app
+
+# Switch to node user
+USER nodejs
+
+# Expose ports
+EXPOSE 3001 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    curl -f http://localhost:3001/health || exit 1
+
+# Start the application
+CMD ["node", "backend/dist/index.js"]

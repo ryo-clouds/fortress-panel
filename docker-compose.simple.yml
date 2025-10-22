@@ -1,0 +1,114 @@
+version: '3.8'
+
+services:
+  # Fortress Panel Application
+  fortress-panel:
+    build:
+      context: .
+      dockerfile: Dockerfile.simple
+    container_name: fortress-panel
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      DB_HOST: mariadb
+      DB_PORT: 3306
+      DB_NAME: fortress_panel
+      DB_USERNAME: fortress_user
+      DB_PASSWORD: ${DB_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: ${JWT_SECRET}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+    volumes:
+      - fortress_logs:/var/log/fortress-panel
+      - fortress_data:/var/lib/fortress-panel
+      - ./shared:/app/shared
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - fortress-network
+
+  # MariaDB Database
+  mariadb:
+    image: mariadb:10.11
+    container_name: fortress-mariadb
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: fortress_panel
+      MYSQL_USER: fortress_user
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_CHARACTER_SET_SERVER: utf8mb4
+      MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - mariadb_logs:/var/log/mysql
+    networks:
+      - fortress-network
+    command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: fortress-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - fortress-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # phpMyAdmin
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: fortress-phpmyadmin
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: mariadb
+      PMA_PORT: 3306
+      PMA_USER: fortress_user
+      PMA_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+    depends_on:
+      - mariadb
+    networks:
+      - fortress-network
+
+networks:
+  fortress-network:
+    driver: bridge
+
+volumes:
+  mariadb_data:
+    driver: local
+  mariadb_logs:
+    driver: local
+  redis_data:
+    driver: local
+  fortress_logs:
+    driver: local
+  fortress_data:
+    driver: local

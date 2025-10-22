@@ -90,7 +90,7 @@ WORKDIR /app
 COPY frontend/package*.json ./
 
 # Install frontend dependencies
-RUN npm install --production
+RUN npm install --production && npm cache clean --force
 
 # Copy frontend source
 COPY frontend/ ./

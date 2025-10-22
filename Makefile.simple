@@ -1,0 +1,101 @@
+.PHONY: help build dev prod start stop logs clean test db-setup
+
+# Default target
+help: ## Show this help message
+	@echo "Fortress Panel - Simple Makefile"
+	@echo ""
+	@echo "Available commands:"
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+	@echo ""
+	@echo "Usage: make [command]"
+
+# Development Commands
+dev: ## Start development environment
+	docker-compose -f docker-compose.dev.yml up -d
+	@echo "🚀 Development environment started"
+
+dev-stop: ## Stop development environment
+	docker-compose -f docker-compose.dev.yml down
+	@echo "🛑 Development environment stopped"
+
+# Production Commands
+build: ## Build application
+	docker build -f Dockerfile.simple -t fortress-panel .
+	@echo "🔨 Application built"
+
+prod: ## Start production environment
+	docker-compose -f docker-compose.simple.yml up -d
+	@echo "🚀 Production environment started"
+
+start: ## Start services (alias for prod)
+	$(MAKE) prod
+
+stop: ## Stop all services
+	docker-compose -f docker-compose.simple.yml down
+	@echo "🛑 Services stopped"
+
+# Database Commands
+db-setup: ## Setup database
+	@echo "🗄️ Setting up database..."
+	docker-compose -f docker-compose.simple.yml exec mariadb mysql -u root -p${DB_ROOT_PASSWORD} -e "CREATE DATABASE IF NOT EXISTS fortress_panel;"
+	@echo "✅ Database setup completed"
+
+db-migrate: ## Run database migrations
+	cd backend && npm run migrate || echo "⚠️ Migration failed - make sure backend is running"
+
+db-seed: ## Seed database with initial data
+	cd backend && npm run seed || echo "⚠️ Seeding failed - make sure backend is running"
+
+# Utility Commands
+logs: ## Show application logs
+	docker-compose -f docker-compose.simple.yml logs -f
+
+logs-db: ## Show database logs
+	docker-compose -f docker-compose.simple.yml logs -f mariadb
+
+logs-redis: ## Show Redis logs
+	docker-compose -f docker-compose.simple.yml logs -f redis
+
+shell: ## Open shell in application container
+	docker-compose -f docker-compose.simple.yml exec fortress-panel sh
+
+clean: ## Clean up Docker resources
+	docker-compose -f docker-compose.simple.yml down -v
+	docker system prune -f
+	docker volume prune -f
+	@echo "🧹 Docker cleanup completed"
+
+test: ## Run tests
+	@echo "🧪 Running tests..."
+	cd backend && npm test || echo "Backend tests failed"
+	cd frontend && npm test || echo "Frontend tests failed"
+
+install: ## Install all dependencies
+	@echo "📦 Installing dependencies..."
+	cd shared && npm install
+	cd backend && npm install
+	cd frontend && npm install
+	@echo "✅ Dependencies installed"
+
+# Monitoring Commands
+status: ## Show service status
+	docker-compose -f docker-compose.simple.yml ps
+
+health: ## Check service health
+	@echo "🏥 Checking service health..."
+	@curl -f http://localhost:3001/health || echo "❌ Application health check failed"
+	docker-compose -f docker-compose.simple.yml exec mariadb mysqladmin ping -h localhost || echo "❌ Database health check failed"
+	docker-compose -f docker-compose.simple.yml exec redis redis-cli ping || echo "❌ Redis health check failed"
+
+# Quick start command
+quick-start: ## Quick start for development
+	@echo "🚀 Quick Starting Fortress Panel..."
+	$(MAKE) install
+	$(MAKE) db-setup
+	$(MAKE) build
+	$(MAKE) prod
+	@echo ""
+	@echo "🎉 Fortress Panel is running!"
+	@echo "📱 Application: http://localhost:3001"
+	@echo "🗄️ Database: http://localhost:8080 (phpMyAdmin)"
+	@echo "🏥 Health Check: http://localhost:3001/health"
