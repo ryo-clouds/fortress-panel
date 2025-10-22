@@ -159,7 +159,7 @@ export class SecurityUtils {
   /**
    * Rate limiting implementation
    */
-  static class RateLimiter {
+  class RateLimiter {
     private requests: Map<string, number[]> = new Map();
     private windowMs: number;
     private maxRequests: number;
