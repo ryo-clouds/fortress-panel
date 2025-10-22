@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Fortress Panel Logo](https://via.placeholder.com/200x80/4F46E5/ffffff?text=Fortress+Panel)
+![Fortress Panel Logo](/fortress-panel/assets/logo.png)
 
 **High-Security Control Panel with Zero Trust Architecture**
 
@@ -693,8 +693,8 @@ make lint
 
 **Built with ❤️ by the Fortress Panel Team**
 
-[![GitHub stars](https://img.shields.io/github/stars/fortress-panel/fortress-panel.svg?style=social&label=Star)](https://github.com/fortress-panel/fortress-panel)
-[![GitHub forks](https://img.shields.io/github/forks/fortress-panel/fortress-panel.svg?style=social&label=Fork)](https://github.com/fortress-panel/fortress-panel/fork)
-[![GitHub issues](https://img.shields.io/github/issues/fortress-panel/fortress-panel.svg)](https://github.com/fortress-panel/fortress-panel/issues)
+[![GitHub stars](https://img.shields.io/github/stars/fortress-panel/fortress-panel.svg?style=social&label=Star)](https://github.com/ryo-clouds/fortress-panel)
+[![GitHub forks](https://img.shields.io/github/forks/fortress-panel/fortress-panel.svg?style=social&label=Fork)](https://github.com/ryo-clouds/fortress-panel/fork)
+[![GitHub issues](https://img.shields.io/github/issues/fortress-panel/fortress-panel.svg)](https://github.com/ryo-clouds/fortress-panel/issues)
 
 </div>
