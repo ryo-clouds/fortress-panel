@@ -1,0 +1,52 @@
+# Development Dockerfile for Fortress Panel
+FROM node:20-alpine AS development
+
+# Install build dependencies
+RUN apk add --no-cache \
+    python3 \
+    make \
+    g++ \
+    git \
+    curl \
+    bash \
+    mysql-client \
+    redis-tools
+
+WORKDIR /app
+
+# Install backend dependencies
+COPY backend/package*.json ./
+RUN npm install
+
+# Copy backend source
+COPY backend/ ./
+COPY shared/ ../shared/
+
+# Install frontend dependencies and build
+WORKDIR /app/frontend
+COPY frontend/package*.json ./
+RUN npm install
+
+# Copy frontend source and setup hot reload
+COPY frontend/ ./
+RUN npm run build
+
+# Switch back to backend directory
+WORKDIR /app
+
+# Create development directories
+RUN mkdir -p \
+    /var/log/fortress-panel \
+    /var/lib/fortress-panel/uploads \
+    /var/lib/fortress-panel/apps \
+    /var/lib/fortress-panel/backups
+
+# Copy development scripts
+COPY docker/scripts/ /opt/fortress-panel/scripts/
+RUN chmod +x /opt/fortress-panel/scripts/*.sh
+
+# Expose ports
+EXPOSE 3001 9229
+
+# Development command with hot reload
+CMD ["npm", "run", "dev"]

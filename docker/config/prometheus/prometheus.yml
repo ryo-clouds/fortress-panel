@@ -1,0 +1,97 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'fortress-panel'
+    environment: 'production'
+
+rule_files:
+  - "alert_rules.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager:9093']
+
+scrape_configs:
+  # Fortress Panel Application
+  - job_name: 'fortress-panel'
+    static_configs:
+      - targets: ['fortress-panel:3001']
+    metrics_path: '/api/monitoring/metrics'
+    scrape_interval: 30s
+    scrape_timeout: 10s
+
+  # Nginx
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['nginx:9113']
+    scrape_interval: 30s
+
+  # MariaDB
+  - job_name: 'mariadb'
+    static_configs:
+      - targets: ['mariadb-exporter:9104']
+    scrape_interval: 30s
+
+  # Redis
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+    scrape_interval: 30s
+
+  # Node Exporter (System Metrics)
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 30s
+
+  # Docker
+  - job_name: 'docker'
+    static_configs:
+      - targets: ['docker-exporter:9323']
+    scrape_interval: 30s
+
+  # PHP-FPM
+  - job_name: 'php-fpm'
+    static_configs:
+      - targets: ['php-fpm-exporter:9253']
+    scrape_interval: 30s
+
+  # Application Containers
+  - job_name: 'docker-containers'
+    static_configs:
+      - targets: ['cadvisor:8080']
+    scrape_interval: 30s
+    metrics_path: '/metrics'
+
+# Recording rules
+recording_rules:
+  - name: fortress_panel.rules
+    rules:
+      # CPU usage rate
+      - record: fortress:cpu_usage:rate5m
+        expr: rate(cpu_usage_total[5m])
+
+      # Memory usage percentage
+      - record: fortress:memory_usage:percent
+        expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100
+
+      # Disk usage percentage
+      - record: fortress:disk_usage:percent
+        expr: (node_filesystem_size_bytes - node_filesystem_free_bytes) / node_filesystem_size_bytes * 100
+
+      # Application request rate
+      - record: fortress:requests:rate5m
+        expr: rate(http_requests_total[5m])
+
+      # Application error rate
+      - record: fortress:errors:rate5m
+        expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) * 100
+
+      # Response time percentiles
+      - record: fortress:response_time:p95
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))
+
+      - record: fortress:response_time:p99
+        expr: histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m]))

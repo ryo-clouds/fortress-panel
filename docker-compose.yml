@@ -1,0 +1,376 @@
+version: '3.8'
+
+services:
+  # Fortress Panel Application
+  fortress-panel:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: fortress-panel
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "3001:3001"
+    environment:
+      NODE_ENV: production
+      DB_HOST: mariadb
+      DB_PORT: 3306
+      DB_NAME: fortress_panel
+      DB_USERNAME: fortress_user
+      DB_PASSWORD: ${DB_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: ${JWT_SECRET}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+    volumes:
+      - fortress_uploads:/var/lib/fortress-panel/uploads
+      - fortress_apps:/var/lib/fortress-panel/apps
+      - fortress_backups:/var/lib/fortress-panel/backups
+      - fortress_ssl:/etc/fortress-panel/ssl
+      - fortress_logs:/var/log/fortress-panel
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - fortress-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # MariaDB Database
+  mariadb:
+    image: mariadb:10.11
+    container_name: fortress-mariadb
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: fortress_panel
+      MYSQL_USER: fortress_user
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_CHARACTER_SET_SERVER: utf8mb4
+      MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - ./docker/config/mysql/my.cnf:/etc/mysql/my.cnf
+      - mariadb_logs:/var/log/mysql
+    networks:
+      - fortress-network
+    command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: fortress-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+      - redis_logs:/var/log/redis
+    networks:
+      - fortress-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  # phpMyAdmin
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: fortress-phpmyadmin
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: mariadb
+      PMA_PORT: 3306
+      PMA_USER: fortress_user
+      PMA_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+    depends_on:
+      - mariadb
+    networks:
+      - fortress-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Application Language Runtime Containers
+  # PHP 8.2 Runtime
+  php-82-runtime:
+    image: php:8.2-apache
+    container_name: fortress-php-82
+    restart: unless-stopped
+    volumes:
+      - fortress_apps:/var/www/html
+      - ./docker/config/php/php82.ini:/usr/local/etc/php/php.ini
+    networks:
+      - fortress-network
+    profiles:
+      - php-runtimes
+
+  # PHP 8.1 Runtime
+  php-81-runtime:
+    image: php:8.1-apache
+    container_name: fortress-php-81
+    restart: unless-stopped
+    volumes:
+      - fortress_apps:/var/www/html
+      - ./docker/config/php/php81.ini:/usr/local/etc/php/php.ini
+    networks:
+      - fortress-network
+    profiles:
+      - php-runtimes
+
+  # PHP 8.0 Runtime
+  php-80-runtime:
+    image: php:8.0-apache
+    container_name: fortress-php-80
+    restart: unless-stopped
+    volumes:
+      - fortress_apps:/var/www/html
+      - ./docker/config/php/php80.ini:/usr/local/etc/php/php.ini
+    networks:
+      - fortress-network
+    profiles:
+      - php-runtimes
+
+  # Node.js Runtime
+  nodejs-runtime:
+    image: node:20-alpine
+    container_name: fortress-nodejs
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - fortress_apps:/app
+    networks:
+      - fortress-network
+    profiles:
+      - nodejs-runtimes
+
+  # Python Runtime
+  python-runtime:
+    image: python:3.11-slim
+    container_name: fortress-python
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - fortress_apps:/app
+    networks:
+      - fortress-network
+    profiles:
+      - python-runtimes
+
+  # Ruby Runtime
+  ruby-runtime:
+    image: ruby:3.2-alpine
+    container_name: fortress-ruby
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - fortress_apps:/app
+    networks:
+      - fortress-network
+    profiles:
+      - ruby-runtimes
+
+  # Go Runtime
+  go-runtime:
+    image: golang:1.21-alpine
+    container_name: fortress-go
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - fortress_apps:/app
+    networks:
+      - fortress-network
+    profiles:
+      - go-runtimes
+
+  # Java Runtime
+  java-runtime:
+    image: openjdk:21-jdk-slim
+    container_name: fortress-java
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - fortress_apps:/app
+    networks:
+      - fortress-network
+    profiles:
+      - java-runtimes
+
+  # Monitoring Stack (Optional)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: fortress-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./docker/config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks:
+      - fortress-network
+    profiles:
+      - monitoring
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: fortress-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD}
+      GF_USERS_ALLOW_SIGN_UP: false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./docker/config/grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      - prometheus
+    networks:
+      - fortress-network
+    profiles:
+      - monitoring
+
+  # Log Aggregation
+  loki:
+    image: grafana/loki:latest
+    container_name: fortress-loki
+    restart: unless-stopped
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./docker/config/loki/loki.yml:/etc/loki/local-config.yaml
+      - loki_data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - fortress-network
+    profiles:
+      - logging
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: fortress-promtail
+    restart: unless-stopped
+    volumes:
+      - ./docker/config/promtail/promtail.yml:/etc/promtail/config.yml
+      - fortress_logs:/var/log/fortress-panel:ro
+      - /var/log:/var/log:ro
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+    networks:
+      - fortress-network
+    profiles:
+      - logging
+
+  # Backup Service
+  backup:
+    image: alpine:latest
+    container_name: fortress-backup
+    restart: unless-stopped
+    volumes:
+      - mariadb_data:/backup/mariadb
+      - redis_data:/backup/redis
+      - fortress_backups:/backups
+      - ./docker/scripts/backup.sh:/backup.sh
+    environment:
+      BACKUP_SCHEDULE: "0 2 * * *"
+      BACKUP_RETENTION_DAYS: 30
+    command: crond -f -l 2
+    depends_on:
+      - mariadb
+      - redis
+    networks:
+      - fortress-network
+    profiles:
+      - backup
+
+  # Reverse Proxy (Optional - for multi-instance deployment)
+  nginx-proxy:
+    image: nginx:alpine
+    container_name: fortress-nginx-proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/config/nginx-proxy/nginx.conf:/etc/nginx/nginx.conf
+      - fortress_ssl:/etc/nginx/ssl
+    depends_on:
+      - fortress-panel
+    networks:
+      - fortress-network
+    profiles:
+      - proxy
+
+volumes:
+  # Database volumes
+  mariadb_data:
+    driver: local
+  mariadb_logs:
+    driver: local
+  redis_data:
+    driver: local
+  redis_logs:
+    driver: local
+  
+  # Application volumes
+  fortress_uploads:
+    driver: local
+  fortress_apps:
+    driver: local
+  fortress_backups:
+    driver: local
+  fortress_ssl:
+    driver: local
+  fortress_logs:
+    driver: local
+  
+  # Monitoring volumes
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  loki_data:
+    driver: local
+
+networks:
+  fortress-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

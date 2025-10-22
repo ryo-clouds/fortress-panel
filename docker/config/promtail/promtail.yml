@@ -1,0 +1,158 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  # Fortress Panel Application Logs
+  - job_name: fortress-panel
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: fortress-panel
+          __path__: /var/log/fortress-panel/*.log
+          service: application
+    pipeline_stages:
+      - json:
+          expressions:
+            level: level
+            message: message
+            timestamp: timestamp
+            service: service
+      - labels:
+        level: level
+        service: service
+      - timestamp:
+        format: RFC3339
+        source: timestamp
+
+  # Nginx Logs
+  - job_name: nginx
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: nginx
+          __path__: /var/log/nginx/*.log
+          service: nginx
+    pipeline_stages:
+      - regex:
+          expression: '(?P<remote_addr>\S+) - (?P<remote_user>\S+) \[(?P<time_local>.+)\] "(?P<method>\S+) (?P<path>\S+) (?P<protocol>\S+)" (?P<status>\d+) (?P<body_bytes_sent>\d+) "(?P<http_referer>.*)" "(?P<http_user_agent>.*)"'
+      - labels:
+        method: method
+        status: status
+        service: nginx
+      - timestamp:
+        format: '02/Jan/2006:15:04:05 -0700'
+        source: time_local
+
+  # MariaDB Logs
+  - job_name: mariadb
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: mariadb
+          __path__: /var/log/mysql/*.log
+          service: database
+    pipeline_stages:
+      - regex:
+          expression: '(?P<timestamp>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z)\s+(?P<level>\w+)\s+(?P<message>.*)'
+      - labels:
+        level: level
+        service: database
+      - timestamp:
+        format: RFC3339
+        source: timestamp
+
+  # System Logs
+  - job_name: system
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: system
+          __path__: /var/log/syslog
+          service: system
+    pipeline_stages:
+      - regex:
+          expression: '(?P<timestamp>\w+\s+\d+\s+\d{2}:\d{2}:\d{2})\s+(?P<hostname>\S+)\s+(?P<service>\S+):\s+(?P<message>.*)'
+      - labels:
+        service: service
+      - timestamp:
+        format: 'Jan 02 15:04:05'
+        source: timestamp
+
+  # Docker Container Logs
+  - job_name: docker
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: docker
+          __path__: /var/lib/docker/containers/*/*.log
+          service: docker
+    pipeline_stages:
+      - docker: {}
+      - labels:
+        service: service
+      - timestamp:
+        format: RFC3339Nano
+        source: time
+
+  # Security Logs
+  - job_name: security
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: security
+          __path__: /var/log/fortress-panel/security*.log
+          service: security
+    pipeline_stages:
+      - json:
+          expressions:
+            level: level
+            message: message
+            timestamp: timestamp
+            event_type: event_type
+            ip_address: ip_address
+      - labels:
+        level: level
+        event_type: event_type
+        service: security
+      - timestamp:
+        format: RFC3339
+        source: timestamp
+
+  # Application Runtime Logs
+  - job_name: runtimes
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: runtimes
+          __path__: /var/log/fortress-panel/runtimes/*.log
+          service: runtime
+    pipeline_stages:
+      - regex:
+          expression: '(?P<timestamp>\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+\[(?P<level>\w+)\]\s+(?P<runtime>\w+)\s+(?P<message>.*)'
+      - labels:
+        level: level
+        runtime: runtime
+        service: runtime
+      - timestamp:
+        format: '2006-01-02 15:04:05'
+        source: timestamp
+
+# Global configuration
+limit_config:
+  enable_rate_limiter: true
+  rate_limit_burst: 10000
+  rate_limit_qps: 500
