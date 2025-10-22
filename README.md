@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Fortress Panel Logo](/fortress-panel/assets/logo.png)
+![Fortress Panel Logo](/assets/logo.png)
 
 **High-Security Control Panel with Zero Trust Architecture**
 
