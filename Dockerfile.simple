@@ -20,8 +20,8 @@ RUN cd backend && npm install --production && npm cache clean --force
 # Copy and install frontend
 COPY frontend/ ./frontend
 
-# Install frontend dependencies and build
-RUN cd frontend && npm install --legacy-peer-deps && npm run build
+# Build backend
+RUN cd backend && npm run build
 
 # Create necessary directories
 RUN mkdir -p \
