@@ -14,8 +14,8 @@ RUN apk add --no-cache \
 COPY backend/package*.json ./
 COPY backend/tsconfig.json ./
 
-# Install dependencies
-RUN npm ci --only=production && npm cache clean --force
+# Install dependencies (change from npm ci to npm install for now)
+RUN npm install --production
 
 # Copy source code
 COPY backend/src ./src
@@ -90,7 +90,7 @@ WORKDIR /app
 COPY frontend/package*.json ./
 
 # Install frontend dependencies
-RUN npm ci && npm cache clean --force
+RUN npm install --production
 
 # Copy frontend source
 COPY frontend/ ./
