@@ -14,8 +14,8 @@ RUN apk add --no-cache \
 COPY backend/ ./backend
 COPY shared/ ./shared
 
-# Install backend dependencies
-RUN cd backend && npm install --production && npm cache clean --force
+# Install backend dependencies (including dev for build)
+RUN cd backend && npm install && npm cache clean --force
 
 # Copy and install frontend
 COPY frontend/ ./frontend
