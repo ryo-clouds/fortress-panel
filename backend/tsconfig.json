@@ -27,7 +27,6 @@
       "@shared/*": ["../shared/*"]
     },
     "typeRoots": ["./node_modules/@types"],
-    "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true
