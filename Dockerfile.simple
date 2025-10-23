@@ -33,7 +33,7 @@ RUN mkdir -p \
 
 # Switch to non-root user
 RUN addgroup -g 1001 nodejs && \
-    adduser -u 1001 -G nodejs -s /bin/sh -d /app nodejs && \
+    adduser -u 1001 -G nodejs -s /bin/sh -h /app -D nodejs && \
     chown -R nodejs:nodejs /app
 
 # Switch to node user
