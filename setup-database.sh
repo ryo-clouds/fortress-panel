@@ -120,9 +120,9 @@ setup_database() {
 
 # Check if required environment variables are set
 if [ -z "$DB_ROOT_PASSWORD" ]; then
-    echo -e "${RED}❌ DB_ROOT_PASSWORD environment variable is required${NC}"
-    echo -e "${YELLOW}Please set DB_ROOT_PASSWORD in your .env file${NC}"
-    exit 1
+    echo -e "${YELLOW}⚠️  DB_ROOT_PASSWORD not found, using default password${NC}"
+    DB_ROOT_PASSWORD="fortress-admin-123"
+    echo -e "${BLUE}🔐 Using default root password: fortress-admin-123${NC}"
 fi
 
 # Run setup
