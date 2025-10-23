@@ -20,8 +20,8 @@ RUN cd backend && npm install && npm cache clean --force
 # Copy and install frontend
 COPY frontend/ ./frontend
 
-# Build backend
-RUN cd backend && npm run build
+# Skip TypeScript build - use simple server
+# RUN cd backend && npm run build
 
 # Create necessary directories
 RUN mkdir -p \
@@ -47,4 +47,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
     CMD curl -f http://localhost:3001/health || exit 1
 
 # Start the application
-CMD ["node", "backend/dist/index.js"]
+CMD ["node", "backend/simple-server.js"]
