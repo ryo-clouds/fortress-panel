@@ -31,13 +31,13 @@ RUN mkdir -p \
     /var/lib/fortress-panel/backups \
     /var/lib/fortress-panel/ssl
 
-# Switch to non-root user
-RUN addgroup -g 1001 nodejs && \
-    adduser -u 1001 -G nodejs -s /bin/sh -h /app -D nodejs && \
-    chown -R nodejs:nodejs /app
+# Skip non-root user creation for testing
+# RUN addgroup -g 1001 nodejs && \
+#     adduser -u 1001 -G nodejs -s /bin/sh -h /app -D nodejs && \
+#     chown -R nodejs:nodejs /app
 
-# Switch to node user
-USER nodejs
+# Run as root for now (not recommended for production)
+# USER nodejs
 
 # Expose ports
 EXPOSE 3001 3000
